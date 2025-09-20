@@ -1,15 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import Icon from '@/components/ui/icon';
 
 const Index = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [activeTab, setActiveTab] = useState('home');
+  const [selectedChat, setSelectedChat] = useState(null);
+  const [newMessage, setNewMessage] = useState('');
+  const [chats, setChats] = useState([
+    {
+      id: 1,
+      name: 'Анна',
+      avatar: '/img/f917f180-2c0e-4f60-9cb2-e782fb658ce7.jpg',
+      lastMessage: 'Привет! Как дела? 😊',
+      time: '14:30',
+      unread: 2,
+      online: true,
+      messages: [
+        { id: 1, text: 'Привет! Увидела твой профиль и решила написать', sender: 'them', time: '14:25' },
+        { id: 2, text: 'Привет! Спасибо, что написала! Очень приятно 😊', sender: 'me', time: '14:27' },
+        { id: 3, text: 'Как дела? Чем занимаешься?', sender: 'them', time: '14:30' }
+      ]
+    },
+    {
+      id: 2,
+      name: 'Дмитрий',
+      avatar: '/img/5b451051-e6fc-4693-891e-444fee9b4bc2.jpg',
+      lastMessage: 'Хочешь встретиться на кофе?',
+      time: 'вчера',
+      unread: 0,
+      online: false,
+      messages: [
+        { id: 1, text: 'Привет! Классные фото у тебя)', sender: 'them', time: 'вчера 19:15' },
+        { id: 2, text: 'Спасибо! У тебя тоже интересный профиль', sender: 'me', time: 'вчера 19:20' },
+        { id: 3, text: 'Хочешь встретиться на кофе?', sender: 'them', time: 'вчера 19:25' }
+      ]
+    }
+  ]);
+  const messagesEndRef = useRef(null);
 
   const profiles = [
     {
@@ -101,7 +136,36 @@ const Index = () => {
             <Button size="icon" variant="ghost" className="bg-white/20 hover:bg-white/30 rounded-full">
               <Icon name="X" size={20} className="text-white" />
             </Button>
-            <Button size="icon" variant="ghost" className="bg-white/20 hover:bg-white/30 rounded-full">
+            <Button 
+              size="icon" 
+              variant="ghost" 
+              className="bg-white/20 hover:bg-white/30 rounded-full"
+              onClick={() => {
+                const updatedChats = [...chats];
+                const existingChat = updatedChats.find(chat => chat.name === profile.name);
+                if (!existingChat) {
+                  const newChat = {
+                    id: Date.now(),
+                    name: profile.name,
+                    avatar: profile.image,
+                    lastMessage: 'Новый матч! 💕',
+                    time: 'сейчас',
+                    unread: 1,
+                    online: true,
+                    messages: [
+                      {
+                        id: 1,
+                        text: `Поздравляем! У вас взаимная симпатия с ${profile.name}! 💕`,
+                        sender: 'system',
+                        time: new Date().toLocaleTimeString().slice(0, 5)
+                      }
+                    ]
+                  };
+                  setChats([newChat, ...updatedChats]);
+                  setActiveTab('messages');
+                }
+              }}
+            >
               <Icon name="Heart" size={20} className="text-white" />
             </Button>
           </div>
@@ -247,7 +311,7 @@ const Index = () => {
           </div>
         )}
 
-        {activeTab === 'messages' && (
+        {activeTab === 'messages' && !selectedChat && chats.length === 0 && (
           <div className="space-y-4">
             <h2 className="text-2xl font-bold">Сообщения</h2>
             <div className="text-center py-12">
@@ -255,6 +319,137 @@ const Index = () => {
               <p className="text-gray-500">Пока нет сообщений</p>
               <p className="text-sm text-gray-400">Начните общаться с людьми, которые вам нравятся!</p>
             </div>
+          </div>
+        )}
+
+        {activeTab === 'messages' && (chats.length > 0 || selectedChat) && (
+          <div className="space-y-4">
+            {!selectedChat ? (
+              <>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold">Сообщения</h2>
+                  <Badge className="bg-primary text-white">{chats.reduce((acc, chat) => acc + chat.unread, 0)}</Badge>
+                </div>
+                <div className="space-y-2">
+                  {chats.map(chat => (
+                    <Card key={chat.id} className="p-4 hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => setSelectedChat(chat)}>
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <Avatar>
+                            <AvatarImage src={chat.avatar} alt={chat.name} />
+                            <AvatarFallback>{chat.name[0]}</AvatarFallback>
+                          </Avatar>
+                          {chat.online && (
+                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-semibold text-sm">{chat.name}</h3>
+                            <span className="text-xs text-gray-500">{chat.time}</span>
+                          </div>
+                          <p className="text-sm text-gray-600 truncate">{chat.lastMessage}</p>
+                        </div>
+                        {chat.unread > 0 && (
+                          <Badge className="bg-primary text-white text-xs">{chat.unread}</Badge>
+                        )}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-3 pb-4 border-b">
+                  <Button size="icon" variant="ghost" onClick={() => setSelectedChat(null)}>
+                    <Icon name="ArrowLeft" size={20} />
+                  </Button>
+                  <div className="relative">
+                    <Avatar>
+                      <AvatarImage src={selectedChat.avatar} alt={selectedChat.name} />
+                      <AvatarFallback>{selectedChat.name[0]}</AvatarFallback>
+                    </Avatar>
+                    {selectedChat.online && (
+                      <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">{selectedChat.name}</h3>
+                    <p className="text-xs text-gray-500">{selectedChat.online ? 'в сети' : 'был(а) в сети недавно'}</p>
+                  </div>
+                </div>
+                
+                <ScrollArea className="h-64 pr-4">
+                  <div className="space-y-4">
+                    {selectedChat.messages.map((message: any) => (
+                      <div key={message.id} className={`flex ${message.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-xs rounded-2xl px-4 py-2 ${
+                          message.sender === 'me' 
+                            ? 'bg-primary text-white' 
+                            : 'bg-gray-100 text-gray-900'
+                        }`}>
+                          <p className="text-sm">{message.text}</p>
+                          <p className={`text-xs mt-1 ${
+                            message.sender === 'me' ? 'text-white/70' : 'text-gray-500'
+                          }`}>
+                            {message.time}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+                
+                <div className="flex gap-2 pt-4 border-t">
+                  <Input
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder="Напишите сообщение..."
+                    className="flex-1"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && newMessage.trim()) {
+                        const newMsg = {
+                          id: Date.now(),
+                          text: newMessage,
+                          sender: 'me',
+                          time: new Date().toLocaleTimeString().slice(0, 5)
+                        };
+                        setChats(chats.map(chat => 
+                          chat.id === selectedChat.id 
+                            ? { ...chat, messages: [...chat.messages, newMsg], lastMessage: newMessage }
+                            : chat
+                        ));
+                        setSelectedChat({ ...selectedChat, messages: [...selectedChat.messages, newMsg] });
+                        setNewMessage('');
+                      }
+                    }}
+                  />
+                  <Button 
+                    size="icon" 
+                    className="gradient-bg text-white"
+                    onClick={() => {
+                      if (newMessage.trim()) {
+                        const newMsg = {
+                          id: Date.now(),
+                          text: newMessage,
+                          sender: 'me',
+                          time: new Date().toLocaleTimeString().slice(0, 5)
+                        };
+                        setChats(chats.map(chat => 
+                          chat.id === selectedChat.id 
+                            ? { ...chat, messages: [...chat.messages, newMsg], lastMessage: newMessage }
+                            : chat
+                        ));
+                        setSelectedChat({ ...selectedChat, messages: [...selectedChat.messages, newMsg] });
+                        setNewMessage('');
+                      }
+                    }}
+                  >
+                    <Icon name="Send" size={16} />
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         )}
 
